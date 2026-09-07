@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="豆と茶の棚" />
+<meta name="theme-color" content="#EEE7D8" />
+<title>豆と茶の棚</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    background: #EEE7D8;
+    color: #2B2018;
+  }
+  .bt-display { font-family: Georgia, "Times New Roman", serif; }
+  .bt-card { background: #FBF8F1; border: 1px solid #DCD0B7; }
+  .bt-pill { border: 1px solid #DCD0B7; background: #FBF8F1; cursor: pointer; padding: 4px 12px; border-radius: 999px; font-size: 14px; }
+  .bt-pill.on { background: #2B2018; color: #EEE7D8; border-color: #2B2018; }
+  .bt-btn { border: 1px solid #DCD0B7; background: #FBF8F1; cursor: pointer; border-radius: 8px; padding: 6px 12px; font-size: 14px; font-weight: 500; }
+  .bt-btn:active { background: #E3DAC5; }
+  .bt-icon-btn { cursor: pointer; background: transparent; border: none; padding: 6px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; }
+  .bt-icon-btn:active { background: #E3DAC5; }
+  .bt-input { background: #EEE7D8; border: 1px solid #DCD0B7; border-radius: 8px; padding: 8px 12px; font-size: 16px; width: 100%; -webkit-appearance: none; }
+  .bt-input:focus { outline: none; border-color: #2B2018; }
+  button, input, textarea { font-family: inherit; }
+
+  /* SVG Icons */
+  .icon { width: 18px; height: 18px; fill: currentColor; display: inline-block; vertical-align: middle; }
+  .icon-sm { width: 15px; height: 15px; fill: currentColor; display: inline-block; vertical-align: middle; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; background: rgba(43,32,24,0.45); }
+  .modal-content { width: 100%; max-width: 420px; border-radius: 16px; overflow: hidden; background: #FBF8F1; max-height: 90vh; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+// --- ICON SVG DATA ---
+const SVGS = {
+  add: '<svg class="icon" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>',
+  search: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>',
+  coffee: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M2 21h18v-2H2v2zm2-4h12V3H4v14zm14-12v7h2c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2h-2zm0 5v-3h2v3h-2z"/></svg>',
+  water_drop: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>',
+  location: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+  eco: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M6.05 8.05c-2.73 2.73-2.73 7.15 0 9.88 2.73 2.73 7.15 2.73 9.88 0 2.73-2.73 2.73-7.15 0-9.88l-9.88 9.88zM16 6l-1.41 1.41 2.58 2.59H11v2h6.17l-2.58 2.59L16 16l5-5z"/></svg>',
+  fire: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M13.5 1.5c0 0-3.5 3.5-3.5 7.5 0 1.28.41 2.46 1.1 3.44C10.1 11.53 9.5 10.1 9.5 8.5c0-1.78.71-3.39 1.86-4.57C8.16 5.09 6 7.79 6 11c0 4.42 3.58 8 8 8s8-3.58 8-8c0-5.18-5.34-8.73-8.5-9.5z"/></svg>',
+  store: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M20 4H4v2h16V4zm1 10v-2l-1-5H4l-1 5v2h1v6h10v-6h4v6h2v-6h1zm-9 4H6v-4h6v4z"/></svg>',
+  schedule: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>',
+  tune: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z"/></svg>',
+  edit: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',
+  archive: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.2 3 17.5 3H6.5c-.7 0-1.38.21-1.65.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.82-1h12.11l.81 1H5.12z"/></svg>',
+  unarchive: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.2 3 17.5 3H6.5c-.7 0-1.38.21-1.65.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 9.5l5.5 5.5H14v2h-4v-2H6.5L12 9.5zM5.12 5l.82-1h12.11l.81 1H5.12z"/></svg>',
+  delete: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',
+  close: '<svg class="icon" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',
+  chevron_right: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>',
+  expand_more: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M16.59 8.59L12 13.17 7.41 8.59 6 10l6 6 6-6z"/></svg>',
+  add_box: '<svg class="icon-sm" viewBox="0 0 24 24"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>'
+};
+
+// --- STATE MANAGEMENT ---
+const STORAGE_KEY = "bean-tea-inventory-items";
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+function emptyDraft(type) {
+  return { type: type || "coffee", name: "", country: "", farm: "", process: "", roaster: "",
+    flavor: "", totalWeight: "", roastDate: "", purchaseDate: todayStr(), notes: "" };
+}
+
+function loadItems() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function saveItems(items) {
+  try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); }
+  catch (e) { console.error("保存に失敗しました", e); }
+}
+
+let state = {
+  items: loadItems(),
+  typeFilter: "all",
+  groupMode: "all",
+  tab: "active",
+  query: "",
+  collapsed: {},
+  modal: null
+};
+
+function setState(updater) {
+  state = Object.assign({}, state, updater);
+  render();
+}
+function persist(nextItems) {
+  state.items = nextItems;
+  saveItems(nextItems);
+  render();
+}
+
+// --- ACTIONS ---
+function addItem(draft) {
+  const total = Math.max(0, Number(draft.totalWeight) || 0);
+  const newItem = {
+    id: uid(), type: draft.type, name: draft.name.trim(), country: draft.country.trim(),
+    farm: draft.farm.trim(), process: draft.process.trim(), roaster: draft.roaster.trim(),
+    flavor: draft.flavor.trim(), totalWeight: total, remaining: total,
+    roastDate: draft.roastDate || "", purchaseDate: draft.purchaseDate || todayStr(),
+    notes: draft.notes.trim(), archived: false, createdAt: Date.now(),
+  };
+  persist([newItem].concat(state.items));
+}
+function editItem(id, draft) {
+  persist(state.items.map(function(it) {
+    return it.id === id ? Object.assign({}, it, {
+      type: draft.type, name: draft.name.trim(), country: draft.country.trim(),
+      farm: draft.farm.trim(), process: draft.process.trim(), roaster: draft.roaster.trim(),
+      flavor: draft.flavor.trim(), roastDate: draft.roastDate || "",
+      purchaseDate: draft.purchaseDate, notes: draft.notes.trim()
+    }) : it;
+  }));
+}
+function useAmount(id, amount) {
+  persist(state.items.map(function(it) {
+    return it.id === id ? Object.assign({}, it, { remaining: clamp(it.remaining - amount, 0, it.totalWeight) }) : it;
+  }));
+}
+function setRemaining(id, value) {
+  persist(state.items.map(function(it) {
+    return it.id === id ? Object.assign({}, it, {
+      remaining: clamp(value, 0, Math.max(it.totalWeight, value)),
+      totalWeight: Math.max(it.totalWeight, value)
+    }) : it;
+  }));
+}
+function restock(id, addAmount) {
+  persist(state.items.map(function(it) {
+    return it.id === id ? Object.assign({}, it, {
+      remaining: it.remaining + addAmount,
+      totalWeight: it.totalWeight + addAmount,
+      purchaseDate: todayStr()
+    }) : it;
+  }));
+}
+function archive(id, archived) {
+  persist(state.items.map(function(it) {
+    return it.id === id ? Object.assign({}, it, { archived: archived }) : it;
+  }));
+}
+function removeItem(id) {
+  persist(state.items.filter(function(it) { return it.id !== id; }));
+}
+
+// --- RENDER ENGINE ---
+function render() {
+  const app = document.getElementById("root");
+  if (!app) return;
+
+  const filtered = state.items.filter(function(it) {
+    if (state.tab === "active" && it.archived) return false;
+    if (state.tab === "archived" && !it.archived) return false;
+    if (state.typeFilter !== "all" && it.type !== state.typeFilter) return false;
+    if (state.query.trim()) {
+      const q = state.query.trim().toLowerCase();
+      const hay = [it.name, it.country, it.farm, it.process, it.roaster, it.flavor].join(" ").toLowerCase();
+      if (hay.indexOf(q) === -1) return false;
+    }
+    return true;
+  });
+
+  let groups = [];
+  if (state.groupMode === "all") {
+    groups = [{ key: "__all__", label: null, list: filtered }];
+  } else {
+    const map = {};
+    filtered.forEach(function(it) {
+      const v = (it[state.groupMode] || "").trim() || "未設定";
+      if (!map[v]) map[v] = [];
+      map[v].push(it);
+    });
+    groups = Object.keys(map).sort(function(a, b) { return a.localeCompare(b, "ja"); }).map(function(label) {
+      return { key: label, label: label, list: map[label] };
+    });
+  }
+
+  const activeItems = state.items.filter(function(it) { return !it.archived; });
+  const stats = {
+    coffee: activeItems.filter(function(it) { return it.type === "coffee"; }).length,
+    tea: activeItems.filter(function(it) { return it.type === "tea"; }).length,
+    low: activeItems.filter(function(it) { return it.totalWeight > 0 && it.remaining / it.totalWeight <= 0.15; }).length
+  };
+
+  let html = '<div style="min-height: 100vh;">' + renderHeader(stats) +
+    '<div style="max-width: 780px; margin: 0 auto; padding: 0 16px 96px;">' +
+    renderToolbar();
+
+  if (groups.every(function(g) { return g.list.length === 0; })) {
+    html += renderEmptyState();
+  } else {
+    html += '<div style="margin-top: 24px; display: flex; flex-direction: column; gap: 32px;">';
+    groups.forEach(function(g) {
+      if (g.list.length === 0) return;
+      html += '<div>';
+      if (g.label) {
+        html += '<button onclick="toggleCollapse(\'' + escapeQuotes(g.key) + '\')" style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; width: 100%; text-align: left; background: none; border: none; cursor: pointer; padding: 0;">' +
+          '<span style="color: #8A7C68;">' + (state.collapsed[g.key] ? SVGS.chevron_right : SVGS.expand_more) + '</span>' +
+          '<span class="bt-display" style="font-size: 18px; font-weight: 600;">' + escapeHtml(g.label) + '</span>' +
+          '<span style="font-size: 13px; color: #8A7C68;">' + g.list.length + '件</span>' +
+          '<div style="flex: 1; height: 1px; background: #DCD0B7;"></div>' +
+          '</button>';
+      }
+      if (!state.collapsed[g.key]) {
+        html += '<div style="display: flex; flex-direction: column; gap: 12px;">';
+        g.list.forEach(function(it) { html += renderItemCard(it); });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '</div>';
+  if (state.modal) html += renderModal();
+  html += '</div>';
+
+  app.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return (str || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function escapeQuotes(str) {
+  return (str || "").replace(/'/g, "\\'").replace(/"/g, "&quot;");
+}
+
+// --- TEMPLATES ---
+function renderHeader(stats) {
+  return '<div style="border-bottom: 1px solid #DCD0B7;">' +
+    '<div style="max-width: 780px; margin: 0 auto; padding: 32px 16px 20px;">' +
+      '<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">' +
+        '<div>' +
+          '<h1 class="bt-display" style="font-size: 28px; font-weight: 600; margin: 0; letter-spacing: -0.01em;">豆と茶の棚</h1>' +
+          '<p style="margin-top: 4px; font-size: 14px; color: #8A7C68;">' +
+            'コーヒー ' + stats.coffee + ' 種・茶 ' + stats.tea + ' 種を保管中' +
+            (stats.low > 0 ? '<span style="color: #7A2E27;"> ・残りわずか ' + stats.low + ' 件</span>' : '') +
+          '</p>' +
+        '</div>' +
+        '<button onclick="openModal(\'add\')" style="display: flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 999px; background: #2B2018; color: #EEE7D8; font-weight: 500; border: none; cursor: pointer;">' +
+          SVGS.add + '新しい豆・茶を登録' +
+        '</button>' +
+      '</div>' +
+      '<div style="margin-top: 20px; position: relative; max-width: 340px;">' +
+        '<span style="position: absolute; left: 12px; top: 9px; color: #8A7C68;">' + SVGS.search + '</span>' +
+        '<input value="' + escapeHtml(state.query) + '" oninput="handleSearchInput(this.value)" placeholder="名前・産地・農園・焙煎所で検索"' +
+          ' class="bt-input" style="padding-left: 36px;" />' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+}
+
+function handleSearchInput(val) {
+  state.query = val;
+}
+
+function renderToolbar() {
+  const types = [{ v: "all", l: "すべて" }, { v: "coffee", l: "コーヒー" }, { v: "tea", l: "茶" }];
+  const groupings = [{ v: "all", l: "一覧" }, { v: "country", l: "国別" }, { v: "process", l: "精製方法別" }, { v: "farm", l: "農園別" }, { v: "roaster", l: "焙煎所別" }];
+  
+  let html = '<div style="padding-top: 20px; display: flex; flex-direction: column; gap: 12px;">' +
+    '<div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">' +
+      '<div style="display: flex; border-radius: 999px; overflow: hidden; border: 1px solid #DCD0B7;">';
+  
+  ["active", "archived"].forEach(function(v) {
+    html += '<button onclick="setState({tab: \'' + v + '\'})" style="padding: 6px 14px; font-size: 14px; font-weight: 500; border: none; cursor: pointer;' +
+      'background: ' + (state.tab === v ? '#2B2018' : '#FBF8F1') + '; color: ' + (state.tab === v ? '#EEE7D8' : '#2B2018') + ';">' +
+      (v === "active" ? "保管中" : "アーカイブ") +
+    '</button>';
+  });
+
+  html += '</div><div style="display: flex; gap: 6px; flex-wrap: wrap;">';
+  types.forEach(function(t) {
+    html += '<button onclick="setState({typeFilter: \'' + t.v + '\'})" class="bt-pill ' + (state.typeFilter === t.v ? "on" : "") + '">' + t.l + '</button>';
+  });
+
+  html += '</div></div><div style="display: flex; gap: 6px; flex-wrap: auto; overflow-x: auto; padding-bottom: 4px;">';
+  groupings.forEach(function(g) {
+    html += '<button onclick="setState({groupMode: \'' + g.v + '\'})" class="bt-pill ' + (state.groupMode === g.v ? "on" : "") + '" style="white-space: nowrap;">' + g.l + '</button>';
+  });
+
+  html += '</div></div>';
+  return html;
+}
+
+function renderEmptyState() {
+  const isArchived = state.tab === "archived";
+  return '<div class="bt-card" style="margin-top: 64px; text-align: center; padding: 64px 24px; border-radius: 16px;">' +
+    '<p class="bt-display" style="font-size: 20px; font-weight: 600; margin: 0;">' +
+      (isArchived ? "アーカイブは空です" : "まだ何も登録されていません") +
+    '</p>' +
+    '<p style="margin-top: 8px; font-size: 14px; color: #8A7C68;">' +
+      (isArchived ? "飲み終えた豆や茶をアーカイブすると、ここに表示されます。" : "手元にあるコーヒー豆や茶葉を登録して、残量の管理を始めましょう。") +
+    '</p>' +
+    (!isArchived ? '<button onclick="openModal(\'add\')" style="margin-top: 20px; display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 999px; background: #2B2018; color: #EEE7D8; font-weight: 500; border: none; cursor: pointer;">' + SVGS.add + '最初の1つを登録する</button>' : '') +
+  '</div>';
+}
+
+function renderItemCard(item) {
+  const pct = item.totalWeight > 0 ? clamp((item.remaining / item.totalWeight) * 100, 0, 100) : 0;
+  const accent = item.type === "coffee" ? "#A23E34" : "#5F7A5D";
+  const accentDeep = item.type === "coffee" ? "#7A2E27" : "#455943";
+  const low = item.totalWeight > 0 && item.remaining / item.totalWeight <= 0.15;
+  const empty = item.remaining <= 0;
+  const archived = state.tab === "archived";
+
+  const rows = [
+    { svg: SVGS.location, v: item.country },
+    { svg: SVGS.eco, v: item.farm },
+    { svg: SVGS.fire, v: item.process },
+    { svg: SVGS.store, v: item.roaster }
+  ].filter(function(r) { return r.v; });
+
+  const days = daysSince(item.roastDate);
+  let roastAgeHtml = "";
+  if (days !== null) {
+    const stale = item.type === "coffee" && days > 21;
+    const label = days === 0 ? "本日焙煎" : days < 0 ? '焙煎まであと' + (-days) + '日' : '焙煎から' + days + '日';
+    roastAgeHtml = '<div style="display: flex; align-items: center; gap: 4px; font-size: 14px; margin-top: 4px; color: ' + (stale ? "#7A2E27" : "#8A7C68") + ';">' +
+      SVGS.schedule + label + '<span style="color: #8A7C68;">（' + new Date(item.roastDate + "T00:00:00").toLocaleDateString("ja-JP") + '焙煎）</span>' +
+    '</div>';
+  }
+
+  let html = '<div class="bt-card" style="border-radius: 16px; display: flex; overflow: hidden;">' +
+    '<div style="width: 12px; flex-shrink: 0; display: flex; flex-direction: column; justify-content: flex-end; background: #E3DAC5;">' +
+      '<div style="height: ' + pct + '%; background: ' + accent + '; transition: height 0.3s;"></div>' +
+    '</div>' +
+    '<div style="flex: 1; padding: 16px;">' +
+      '<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">' +
+        '<div style="min-width: 0;">' +
+          '<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">' +
+            '<span style="color: ' + accentDeep + ';">' + (item.type === "coffee" ? SVGS.coffee : SVGS.water_drop) + '</span>' +
+            '<span class="bt-display" style="font-size: 18px; font-weight: 600;">' + escapeHtml(item.name || "名称未設定") + '</span>' +
+            (empty ? '<span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #A23E34; color: #fff;">在庫なし</span>' : '') +
+            (!empty && low ? '<span style="font-size: 12px; padding: 2px 8px; border-radius: 999px; background: #B8873B; color: #fff;">残りわずか</span>' : '') +
+          '</div>';
+
+  if (rows.length > 0) {
+    html += '<div style="display: flex; flex-wrap: wrap; column-gap: 16px; row-gap: 4px; margin-top: 6px;">';
+    rows.forEach(function(r) {
+      html += '<span style="display: flex; align-items: center; gap: 4px; font-size: 14px; color: #8A7C68;">' + r.svg + escapeHtml(r.v) + '</span>';
+    });
+    html += '</div>';
+  }
+
+  html += roastAgeHtml +
+          (item.flavor ? '<p style="margin-top: 6px; font-size: 14px; opacity: 0.75; margin-bottom: 0;">' + escapeHtml(item.flavor) + '</p>' : '') +
+        '</div>' +
+        '<div style="text-align: right; flex-shrink: 0;">' +
+          '<div class="bt-display" style="font-size: 20px; font-weight: 600;">' +
+            item.remaining + 'g<span style="font-size: 14px; color: #8A7C68; font-weight: 400;"> / ' + item.totalWeight + 'g</span>' +
+          '</div>' +
+          '<div style="font-size: 12px; margin-top: 2px; color: #8A7C68;">残り ' + Math.round(pct) + '%</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">' +
+        (!archived ?
+          '<button onclick="openModal(\'use\', \'' + item.id + '\')" ' + (empty ? 'disabled' : '') + ' class="bt-btn" style="opacity: ' + (empty ? 0.4 : 1) + ';">使った量を記録</button>' +
+          '<button onclick="openModal(\'adjust\', \'' + item.id + '\')" class="bt-btn" style="display: flex; align-items: center; gap: 6px;">' + SVGS.tune + '残量を調整</button>' : ''
+        ) +
+        '<button onclick="openModal(\'edit\', \'' + item.id + '\')" class="bt-icon-btn" aria-label="編集" style="color: #8A7C68;">' + SVGS.edit + '</button>' +
+        (archived ?
+          '<button onclick="archive(\'' + item.id + '\', false)" class="bt-icon-btn" aria-label="復元" style="color: #8A7C68;">' + SVGS.unarchive + '</button>' :
+          '<button onclick="archive(\'' + item.id + '\', true)" class="bt-icon-btn" aria-label="アーカイブ" style="color: #8A7C68;">' + SVGS.archive + '</button>'
+        ) +
+        '<button onclick="openModal(\'delete\', \'' + item.id + '\')" class="bt-icon-btn" aria-label="削除" style="color: #8A7C68;">' + SVGS.delete + '</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  return html;
+}
+
+// --- MODALS ---
+function renderModal() {
+  const m = state.modal;
+  let content = "";
+  if (m.mode === "add" || m.mode === "edit") content = renderItemForm(m);
+  else if (m.mode === "use") content = renderUseForm(m);
+  else if (m.mode === "adjust") content = renderAdjustForm(m);
+  else if (m.mode === "delete") content = renderDeleteForm(m);
+
+  return '<div class="modal-overlay" onclick="closeModal()">' +
+    '<div class="modal-content" onclick="handleModalClick(event)">' +
+      content +
+    '</div>' +
+  '</div>';
+}
+
+function handleModalClick(e) {
+  if (e && e.stopPropagation) e.stopPropagation();
+}
+
+function renderModalHeader(title) {
+  return '<div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #DCD0B7;">' +
+    '<span class="bt-display" style="font-size: 18px; font-weight: 600;">' + escapeHtml(title) + '</span>' +
+    '<button onclick="closeModal()" class="bt-icon-btn" aria-label="閉じる">' + SVGS.close + '</button>' +
+  '</div>';
+}
+
+function renderItemForm(m) {
+  const d = m.draft;
+  const isAdd = m.mode === "add";
+
+  return renderModalHeader(isAdd ? "新しい豆・茶を登録" : "詳細を編集") +
+    '<div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">' +
+      '<div style="display: flex; border-radius: 999px; overflow: hidden; border: 1px solid #DCD0B7; align-self: flex-start;">' +
+        '<button onclick="updateModalDraftType(\'coffee\')" style="padding: 6px 16px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; background: ' + (d.type === 'coffee' ? '#2B2018' : '#FBF8F1') + '; color: ' + (d.type === 'coffee' ? '#EEE7D8' : '#2B2018') + ';">コーヒー</button>' +
+        '<button onclick="updateModalDraftType(\'tea\')" style="padding: 6px 16px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; background: ' + (d.type === 'tea' ? '#2B2018' : '#FBF8F1') + '; color: ' + (d.type === 'tea' ? '#EEE7D8' : '#2B2018') + ';">茶</button>' +
+      '</div>' +
+      '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+        '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">名前</span>' +
+        '<input class="bt-input" value="' + escapeHtml(d.name) + '" oninput="state.modal.draft.name = this.value" placeholder="例：エチオピア イルガチェフェ" />' +
+      '</label>' +
+      '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">産地(国)</span>' +
+          '<input class="bt-input" value="' + escapeHtml(d.country) + '" oninput="state.modal.draft.country = this.value" placeholder="例：エチオピア" />' +
+        '</label>' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">農園 / 茶園</span>' +
+          '<input class="bt-input" value="' + escapeHtml(d.farm) + '" oninput="state.modal.draft.farm = this.value" placeholder="例：コチェレ農園" />' +
+        '</label>' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">精製方法</span>' +
+          '<input class="bt-input" value="' + escapeHtml(d.process) + '" oninput="state.modal.draft.process = this.value" placeholder="例：ウォッシュド" />' +
+        '</label>' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">焙煎所 / 販売元</span>' +
+          '<input class="bt-input" value="' + escapeHtml(d.roaster) + '" oninput="state.modal.draft.roaster = this.value" placeholder="例：Acid Coffee" />' +
+        '</label>' +
+      '</div>' +
+      '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+        '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">フレーバー・テイスティングノート</span>' +
+        '<input class="bt-input" value="' + escapeHtml(d.flavor) + '" oninput="state.modal.draft.flavor = this.value" placeholder="例：ベルガモット、はちみつ、ジャスミン" />' +
+      '</label>' +
+      (isAdd ?
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">購入量(g)</span>' +
+          '<input type="number" min="0" class="bt-input" value="' + escapeHtml(d.totalWeight) + '" oninput="state.modal.draft.totalWeight = this.value" placeholder="例：200" />' +
+        '</label>' : ''
+      ) +
+      '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">焙煎日(任意)</span>' +
+          '<input type="date" class="bt-input" value="' + escapeHtml(d.roastDate) + '" onchange="state.modal.draft.roastDate = this.value" />' +
+        '</label>' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">購入日</span>' +
+          '<input type="date" class="bt-input" value="' + escapeHtml(d.purchaseDate) + '" onchange="state.modal.draft.purchaseDate = this.value" />' +
+        '</label>' +
+      '</div>' +
+      '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+        '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">メモ(任意)</span>' +
+        '<textarea class="bt-input" style="resize: vertical;" rows="2" oninput="state.modal.draft.notes = this.value">' + escapeHtml(d.notes) + '</textarea>' +
+      '</label>' +
+      '<div id="form-error-msg" style="font-size: 14px; color: #7A2E27; margin: 0; display: none;"></div>' +
+      '<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">' +
+        '<button onclick="closeModal()" class="bt-btn">キャンセル</button>' +
+        '<button onclick="submitItemForm()" style="padding: 8px 16px; border-radius: 8px; font-size: 14px; background: #2B2018; color: #EEE7D8; font-weight: 500; border: none; cursor: pointer;">' +
+          (isAdd ? "登録する" : "保存する") +
+        '</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function updateModalDraftType(type) {
+  if (state.modal && state.modal.draft) {
+    state.modal.draft.type = type;
+    render();
+  }
+}
+
+function renderUseForm(m) {
+  const item = m.item;
+  const presets = item.type === "coffee" ? [8.5, 12, 15, 18, 20, 25] : [3, 5, 8];
+  const value = m.custom !== "" ? Number(m.custom) : m.amount;
+  const willBe = clamp(item.remaining - (value || 0), 0, item.remaining);
+  const willEmpty = willBe <= 0 && value > 0;
+
+  let presetBtns = "";
+  presets.forEach(function(p) {
+    presetBtns += '<button onclick="setUseAmount(' + p + ')" class="bt-pill ' + (m.custom === '' && m.amount === p ? 'on' : '') + '">' + p + 'g</button>';
+  });
+
+  return renderModalHeader(item.name + " — 使った量を記録") +
+    '<div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">' +
+      '<p style="font-size: 14px; color: #8A7C68; margin: 0;">現在の残量：' + item.remaining + 'g</p>' +
+      '<div style="display: flex; gap: 8px; flex-wrap: wrap;">' + presetBtns + '</div>' +
+      '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+        '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">または g数を直接入力</span>' +
+        '<input type="number" min="0" class="bt-input" value="' + escapeHtml(m.custom) + '" oninput="setUseCustom(this.value)" placeholder="例：12" />' +
+      '</label>' +
+      '<p style="font-size: 14px; margin: 0;">記録後の残量：<span id="use-will-be-val" style="font-weight: 600;">' + willBe + 'g</span></p>' +
+      '<div id="use-empty-warn" style="font-size: 14px; padding: 8px 12px; border-radius: 8px; background: #E3DAC5; margin: 0; display: ' + (willEmpty ? 'block' : 'none') + ';">残量が0になります。このままアーカイブすることもできます。</div>' +
+      '<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; flex-wrap: wrap;">' +
+        '<button onclick="closeModal()" class="bt-btn">キャンセル</button>' +
+        '<button id="use-btn-archive" onclick="confirmUse(true)" class="bt-btn" style="display: ' + (willEmpty ? 'inline-block' : 'none') + ';">記録してアーカイブ</button>' +
+        '<button id="use-btn-submit" onclick="confirmUse(false)" ' + ((!value || value <= 0) ? 'disabled' : '') + ' style="padding: 8px 16px; border-radius: 8px; font-size: 14px; background: #2B2018; color: #EEE7D8; font-weight: 500; border: none; cursor: pointer; opacity: ' + ((!value || value <= 0) ? 0.4 : 1) + ';">記録する</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function renderAdjustForm(m) {
+  const item = m.item;
+  const isFix = m.adjustMode === "fix";
+
+  return renderModalHeader(item.name + " — 残量を調整") +
+    '<div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">' +
+      '<div style="display: flex; border-radius: 999px; overflow: hidden; border: 1px solid #DCD0B7; align-self: flex-start;">' +
+        '<button onclick="setAdjustMode(\'fix\')" style="padding: 6px 16px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; background: ' + (isFix ? '#2B2018' : '#FBF8F1') + '; color: ' + (isFix ? '#EEE7D8' : '#2B2018') + ';">残量を修正</button>' +
+        '<button onclick="setAdjustMode(\'restock\')" style="padding: 6px 16px; font-size: 14px; font-weight: 500; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; background: ' + (!isFix ? '#2B2018' : '#FBF8F1') + '; color: ' + (!isFix ? '#EEE7D8' : '#2B2018') + ';">' +
+          SVGS.add_box + '買い足す' +
+        '</button>' +
+      '</div>' +
+      (isFix ?
+        '<p style="font-size: 14px; color: #8A7C68; margin: 0;">計量した実際の残量に直接置き換えます。（例：思ったより少なかった、2gだけ残っていた等）</p>' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">実際の残量(g)</span>' +
+          '<input type="number" min="0" class="bt-input" value="' + escapeHtml(m.fixValue) + '" oninput="state.modal.fixValue = this.value" />' +
+        '</label>' +
+        '<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">' +
+          '<button onclick="closeModal()" class="bt-btn">キャンセル</button>' +
+          '<button onclick="confirmAdjustFix()" style="padding: 8px 16px; border-radius: 8px; font-size: 14px; background: #2B2018; color: #EEE7D8; font-weight: 500; border: none; cursor: pointer;">この値に修正する</button>' +
+        '</div>' :
+        '<p style="font-size: 14px; color: #8A7C68; margin: 0;">同じ豆・茶を買い足したときに、残量と総量へ加算します。</p>' +
+        '<label style="display: flex; flex-direction: column; gap: 6px;">' +
+          '<span style="font-size: 14px; color: #8A7C68; font-weight: 500;">買い足した量(g)</span>' +
+          '<input type="number" min="0" class="bt-input" value="' + escapeHtml(m.restockValue) + '" oninput="handleRestockInput(this.value)" placeholder="例：200" />' +
+        '</label>' +
+        '<p style="font-size: 14px; margin: 0;">追加後の残量：<span id="adjust-restock-val" style="font-weight: 600;"> ' + (item.remaining + (Number(m.restockValue) || 0)) + 'g</span></p>' +
+        '<div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">' +
+          '<button onclick="closeModal()" class="bt-btn">キャンセル</button>' +
+          '<button id="adjust-restock-btn" onclick="confirmAdjustRestock()" ' + ((!m.restockValue || Number(m.restockValue) <= 0) ? 'disabled' : '') + ' style="padding: 8px 16px; border-radius: 8px; font-size: 14px; background: #2B2018; color: #EEE7D8; font-weight: 500; border: none; cursor: pointer; opacity: ' + ((!m.restockValue || Number(m.restockValue) <= 0) ? 0.4 : 1) + ';">買い足しを記録する</button>' +
+        '</div>'
+      ) +
+    '</div>';
+}
+
+function handleRestockInput(val) {
+  state.modal.restockValue = val;
+  const item = state.modal.item;
+  const num = Number(val) || 0;
+  const targetVal = document.getElementById('adjust-restock-val');
+  const targetBtn = document.getElementById('adjust-restock-btn');
+  if (targetVal) targetVal.innerText = (item.remaining + num) + 'g';
+  if (targetBtn) {
+    const disabled = !val || num <= 0;
+    targetBtn.disabled = disabled;
+    targetBtn.style.opacity = disabled ? '0.4' : '1';
+  }
+}
+
+function renderDeleteForm(m) {
+  return renderModalHeader("完全に削除しますか？") +
+    '<div style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">' +
+      '<p style="font-size: 14px; margin: 0;">「' + escapeHtml(m.item.name) + '」の登録データを完全に削除します。この操作は取り消せません。飲み終えただけなら、削除の代わりにアーカイブをおすすめします。</p>' +
+      '<div style="display: flex; justify-content: flex-end; gap: 8px;">' +
+        '<button onclick="closeModal()" class="bt-btn">キャンセル</button>' +
+        '<button onclick="removeItem(\'' + m.item.id + '\'); closeModal();" style="padding: 8px 16px; border-radius: 8px; font-size: 14px; background: #7A2E27; color: #fff; font-weight: 500; border: none; cursor: pointer;">完全に削除する</button>' +
+      '</div>' +
+    '</div>';
+}
+
+// --- MODAL CONTROLLERS ---
+function openModal(mode, itemId) {
+  let item = null;
+  if (itemId) {
+    for (let i = 0; i < state.items.length; i++) {
+      if (state.items[i].id === itemId) { item = state.items[i]; break; }
+    }
+  }
+  let modalData = { mode: mode, item: item };
+
+  if (mode === "add") {
+    modalData.draft = emptyDraft();
+  } else if (mode === "edit" && item) {
+    modalData.draft = {
+      type: item.type, name: item.name, country: item.country, farm: item.farm,
+      process: item.process, roaster: item.roaster, flavor: item.flavor,
+      roastDate: item.roastDate || "", purchaseDate: item.purchaseDate, notes: item.notes
+    };
+  } else if (mode === "use" && item) {
+    modalData.amount = item.type === "coffee" ? 8.5 : 3;
+    modalData.custom = "";
+  } else if (mode === "adjust" && item) {
+    modalData.adjustMode = "fix";
+    modalData.fixValue = String(item.remaining);
+    modalData.restockValue = "";
+  }
+
+  setState({ modal: modalData });
+}
+
+function closeModal() {
+  setState({ modal: null });
+}
+
+function toggleCollapse(key) {
+  let next = Object.assign({}, state.collapsed);
+  next[key] = !next[key];
+  setState({ collapsed: next });
+}
+
+function submitItemForm() {
+  const m = state.modal;
+  const draft = m.draft;
+  const errEl = document.getElementById('form-error-msg');
+
+  if (!draft.name.trim()) {
+    if (errEl) { errEl.innerText = "名前を入力してください"; errEl.style.display = "block"; }
+    return;
+  }
+  if (m.mode === "add" && (!draft.totalWeight || Number(draft.totalWeight) <= 0)) {
+    if (errEl) { errEl.innerText = "購入量(g)を入力してください"; errEl.style.display = "block"; }
+    return;
+  }
+  if (m.mode === "add") {
+    addItem(draft);
+  } else {
+    editItem(m.item.id, draft);
+  }
+  closeModal();
+}
+
+function setUseAmount(p) {
+  state.modal.amount = p;
+  state.modal.custom = "";
+  render();
+}
+function setUseCustom(val) {
+  state.modal.custom = val;
+  const item = state.modal.item;
+  const value = val !== "" ? Number(val) : state.modal.amount;
+  const willBe = clamp(item.remaining - (value || 0), 0, item.remaining);
+  const willEmpty = willBe <= 0 && value > 0;
+
+  const targetVal = document.getElementById('use-will-be-val');
+  const targetWarn = document.getElementById('use-empty-warn');
+  const targetArc = document.getElementById('use-btn-archive');
+  const targetSub = document.getElementById('use-btn-submit');
+
+  if (targetVal) targetVal.innerText = willBe + 'g';
+  if (targetWarn) targetWarn.style.display = willEmpty ? 'block' : 'none';
+  if (targetArc) targetArc.style.display = willEmpty ? 'inline-block' : 'none';
+  if (targetSub) {
+    const disabled = !value || value <= 0;
+    targetSub.disabled = disabled;
+    targetSub.style.opacity = disabled ? '0.4' : '1';
+  }
+}
+
+function confirmUse(alsoArchive) {
+  const m = state.modal;
+  const val = m.custom !== "" ? Number(m.custom) : m.amount;
+  useAmount(m.item.id, val);
+  if (alsoArchive) archive(m.item.id, true);
+  closeModal();
+}
+
+function setAdjustMode(mode) {
+  state.modal.adjustMode = mode;
+  render();
+}
+
+function confirmAdjustFix() {
+  const m = state.modal;
+  setRemaining(m.item.id, clamp(Number(m.fixValue) || 0, 0, 999999));
+  closeModal();
+}
+function confirmAdjustRestock() {
+  const m = state.modal;
+  restock(m.item.id, Math.max(0, Number(m.restockValue) || 0));
+  closeModal();
+}
+
+// Initial Render
+render();
+</script>
+</body>
+</html>
